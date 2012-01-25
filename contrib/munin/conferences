@@ -8,10 +8,10 @@ graph_vlabel conferences
 graph_category appkonference
 graph_info A data point is the sum of all active conferences at the sample time.
 conferences.label conferences
+conferences.warning 250
 EOM
 	exit 0;;
 esac
 
 echo -n "conferences.value "
-asterisk -rx "konference list" | tee /tmp/konferences | sed 1d | wc -l
-
+asterisk -rx "konference list" | sed 1d | wc -l

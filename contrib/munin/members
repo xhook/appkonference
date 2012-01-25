@@ -13,5 +13,4 @@ EOM
 	exit 0;;
 esac
 
-cat /tmp/konferences | sed 1d | (sum=0; while read -ers conf count vol; do sum=$(($sum+$count)); done; echo  "members.value $sum")
-
+asterisk -rx "konference list" | sed 1d | (sum=0; while read -ers conf count vol; do sum=$(($sum+$count)); done; echo  "members.value $sum")
