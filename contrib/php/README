@@ -1,0 +1,19 @@
+
+The "konference" extension can be used to access the speaker scoreboard from
+PHP. The extension defines a boolean function "is_speaking" that takes a
+speaker's scoreboard identifier and returns "true" if the conference member is
+speaking. The speaker's scoreboard identifier is sent to the application
+manager when a member joins a conference via the conference join event.
+
+To compile the extension "cd" to the directory containing the php extension and ...
+
+1. phpize
+2. aclocal
+3. autoreconf -fvi
+4. ./configure
+5. make
+6. make install
+
+After the module is installed configure your PHP server with the extension and
+access the speaker state with the "is_speaking" function.
+
