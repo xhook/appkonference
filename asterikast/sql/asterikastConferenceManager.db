@@ -32,6 +32,7 @@ CREATE TABLE `online` (
   `number` varchar(20) default NULL,
   `name` varchar(20) default NULL,
   `admin` int(11) default '0',
+  `scoreid` int(11) default NULL,
   PRIMARY KEY  (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 SET character_set_client = @saved_cs_client;

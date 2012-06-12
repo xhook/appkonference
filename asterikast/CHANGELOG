@@ -1,3 +1,6 @@
+2012-06-12 John Hass <john@sipmeeting.com>
+	Added Support for the php speaking scoreboard module edit www/getconference-now.php  change $use_module=1, this lessens the load on the manage interface for messages (Both Mysql and SQLite have support now)
+		
 2009-12-30 John Hass <john@sipmeeting.com>
 	Added CHANGELOG :)
 	Added Conference Join Sounds to the listener. (listener internal flag of nothing q to supress)

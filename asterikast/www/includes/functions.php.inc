@@ -75,6 +75,24 @@ function getChannel($db,$member_id) {
 	}
 }
 
+function getScoreid($db,$member_id) {
+	include('config.php.inc');
+	if ($db_engine == "sqlite") {
+		$sql = "select scoreid from online where member_id='$member_id'";
+		$query = sqlite3_query($db, $sql);
+		if (!$query) die (sqlite3_error($db));
+		while ( ($row = sqlite3_fetch_array($query))) {
+			return $row['scoreid'];
+		}
+	} else if ($db_engine == "mysql") {
+		$sql = "select scoreid from online where member_id='$member_id'";
+		$query = mysql_query($sql,$db) or die (mysql_error());
+		while ( ($row = mysql_fetch_array($query))) {
+			return $row['scoreid'];
+		}
+	}
+}
+
 function getName($db,$member_id) {
 	include('config.php.inc');
 	if ($db_engine == "sqlite") {

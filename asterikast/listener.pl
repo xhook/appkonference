@@ -88,12 +88,13 @@ while (<$remote>) {
 			$uniqueid = $hash{"UniqueID"};
 			my $fulluniqueid = $uniqueid;
 			$duration = $hash{"Duration"};
+			$scoreid = $hash{"ScoreID"};
 			#remove the . from the uid, messes up playback
 			$uid =~ s/\.//g; #Unique Enough
 			$moderators = $hash{"Moderators"};
                         print STDERR "$t\n" . Data::Dumper->Dump([\%hash], ['*hash']); #For extra debugging Lots of Info
                         switch ($event) {
-                                case "ConferenceJoin" { ConferenceJoin($conference,$channel,$flags,$count,$member,$number,$name,$uid,$moderators); }
+                                case "ConferenceJoin" { ConferenceJoin($conference,$channel,$flags,$count,$member,$number,$name,$uid,$moderators,$scoreid); }
                                 case "ConferenceDTMF" { ConferenceDTMF($conference,$channel,$flags,$count,$key,$muted); }
                                 case "ConferenceLeave" { ConferenceLeave($conference,$channel,$flags,$member,$count,$uid,$moderators,$duration,$fulluniqueid); }
                                 case "ConferenceState" { ConferenceState($conference,$channel,$flags,$state); }
@@ -390,8 +391,9 @@ sub ConferenceJoin {
 	$name = shift;
 	$uniqueid = shift;
 	$moderators = shift;
+	$scoreid = shift;
 	if (defined($dbh)) {
-		$dbh->do("INSERT INTO online (member_id,conference,channel,uniqueid,number,name) values ('$member','$conference','$channel','$uniqueid','$number','$name')");
+		$dbh->do("INSERT INTO online (member_id,conference,channel,uniqueid,number,name,scoreid) values ('$member','$conference','$channel','$uniqueid','$number','$name','$scoreid')");
 		my $recording = 0;
 		$sql = "SELECT count(*) from online where conference='$conference' AND number='100'";
 		my $sth = $dbh->prepare($sql);
@@ -505,7 +507,7 @@ sub rtrim($) {
 
 
 sub createSQLiteTable {
-	$dbh->do("CREATE TABLE online (id INTEGER PRIMARY KEY, member_id INTEGER, conference varchar(255), channel varchar(80), talking INTEGER DEFAULT 0,muted INTEGER DEFAULT 0,number varchar(20), name varchar(20),admin INTEGER default 0)");
+	$dbh->do("CREATE TABLE online (id INTEGER PRIMARY KEY, member_id INTEGER, conference varchar(255), channel varchar(80), talking INTEGER DEFAULT 0,muted INTEGER DEFAULT 0,number varchar(20), name varchar(20),admin INTEGER default 0,scoreid INTEGER default 0)");
 }
 
 

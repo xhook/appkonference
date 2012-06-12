@@ -218,3 +218,8 @@ Ubuntu Server 8.10
 
 	That's it you should be able to browse to:
 		http://server/index.php
+
+
+**********************Other************************************
+If you would like to support the php module, you need to install the php module that is located in the contrib directory,
+then simply edit www/getconference-now.php and change use_module=0 to use_module=1

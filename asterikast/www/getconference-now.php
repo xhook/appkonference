@@ -1,5 +1,6 @@
 <script language="JavaScript" src="js/tooltip.js"></script>
 <?php
+$use_module=0;
 include('includes/connect.php.inc');
 include('includes/functions.php.inc');
 $conference = $_GET['conference'];
@@ -19,7 +20,13 @@ foreach($members as &$member) {
 	$channel = getChannel($db,$member);
 	$name = getName($db,$member);
 	$number = getNumber($db,$member);
-	$talking = getTalking($db,$member);
+	$talking = 0;
+	if ($use_module=1) {
+		$scoreid = getScoreid($db,$member);
+		$talking = is_speaking($scoreid);
+	} else {
+		$talking = getTalking($db,$member);
+	}
 	$muted = getMuted($db,$member);
         if ($row_id == "RowEven") {
                 $row_id = "RowOdd";
