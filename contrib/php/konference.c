@@ -28,7 +28,7 @@ PHP_FUNCTION(is_speaking)
 	return;
 }
 
-static function_entry php_konference_functions[] = {
+static zend_function_entry php_konference_functions[] = {
 	PHP_FE(is_speaking, NULL)
 	{ NULL, NULL, NULL }
 };
