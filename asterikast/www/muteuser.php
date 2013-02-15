@@ -5,6 +5,6 @@ $channel = $_GET['channel'];
 muteUser($db,$channel);
 
 if ($db_engine == "sqlite") {
-        sqlite3_close ($db);
+        $db->close();
 } 
 ?>

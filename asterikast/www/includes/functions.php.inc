@@ -4,9 +4,9 @@ function getConference($db,$conference) {
 	$members = array();
 	if ($db_engine == "sqlite") {
 		$sql = "select member_id from online where conference='$conference' order by talking desc";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
-		while ( ($row = sqlite3_fetch_array($query))) {
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
+		while ( ($row = $results->fetchArray())) {
 			array_push($members,$row['member_id']);
 		}
 	} else if ($db_engine == "mysql") {
@@ -24,9 +24,9 @@ function getAllConferences($db) {
 	$conferences = array();
 	if ($db_engine == "sqlite") {
 		$sql = "select conference from online group by conference";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
-		while ( ($row = sqlite3_fetch_array($query))) {
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
+		while ( ($row = $results->fetchArray())) {
 			array_push($conferences,$row['conference']);
 		}
 	} else if ($db_engine == "mysql") {
@@ -43,9 +43,9 @@ function getConferenceCount($db,$conference) {
 	include('config.php.inc');
 	if ($db_engine =="sqlite") {
 		$sql = "select count(*) from online where conference='$conference'";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
-		while ( ($row = sqlite3_fetch_array($query))) {
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
+		while ( ($row = $results->fetchArray())) {
 			return($row['count(*)']);
 		}
 	} else if ($db_engine =="mysql") {
@@ -61,9 +61,9 @@ function getChannel($db,$member_id) {
 	include('config.php.inc');
 	if ($db_engine == "sqlite") {
 		$sql = "select channel from online where member_id='$member_id'";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
-		while ( ($row = sqlite3_fetch_array($query))) {
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
+		while ( ($row = $results->fetchArray())) {
 			return $row['channel'];
 		}
 	} else if ($db_engine == "mysql") {
@@ -79,9 +79,9 @@ function getScoreid($db,$member_id) {
 	include('config.php.inc');
 	if ($db_engine == "sqlite") {
 		$sql = "select scoreid from online where member_id='$member_id'";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
-		while ( ($row = sqlite3_fetch_array($query))) {
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
+		while ( ($row = $results->fetchArray())) {
 			return $row['scoreid'];
 		}
 	} else if ($db_engine == "mysql") {
@@ -97,9 +97,9 @@ function getName($db,$member_id) {
 	include('config.php.inc');
 	if ($db_engine == "sqlite") {
 		$sql = "select name from online where member_id='$member_id'";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
-		while ( ($row = sqlite3_fetch_array($query))) {
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
+		while ( ($row = $results->fetchArray())) {
 			return $row['name'];
 		}
 	}  else if ($db_engine == "mysql") {
@@ -115,9 +115,9 @@ function getNumber($db,$member_id) {
 	include('config.php.inc');
 	if ($db_engine == "sqlite") {
 		$sql = "select number from online where member_id='$member_id'";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
-		while ( ($row = sqlite3_fetch_array($query))) {
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
+		while ( ($row = $results->fetchArray())) {
 			return $row['number'];
 		}
 	} else if ($db_engine == "mysql") {
@@ -133,9 +133,9 @@ function getTalking($db,$member_id) {
 	include('config.php.inc');
 	if ($db_engine =="sqlite") {
 		$sql = "select talking from online where member_id='$member_id'";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
-		while ( ($row = sqlite3_fetch_array($query))) {
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
+		while ( ($row = $results->fetchArray())) {
 			return $row['talking'];
 		}
 	} else if ($db_engine == "mysql") {
@@ -151,9 +151,9 @@ function getMuted($db,$member_id) {
 	include('config.php.inc');
 	if ($db_engine == "sqlite") {
 		$sql = "select muted from online where member_id='$member_id'";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
-		while ( ($row = sqlite3_fetch_array($query))) {
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
+		while ( ($row = $results->fetchArray())) {
 			return $row['muted'];
 		}
 	} else if ($db_engine == "mysql") {
@@ -194,6 +194,11 @@ function kickUser($conference,$channel) {
         fputs($fp,"Command: konference kickchannel $channel\r\n\r\n");
        	fputs($fp,"action: logoff\r\n");
         fputs($fp,"\r\n");
+	//read until the end
+        while (!feof($fp)) {
+                $line=(fgets($fp, 4096));
+                echo "$line<br>";
+        }
 }
 
 function volumeDown($channel) {
@@ -202,6 +207,10 @@ function volumeDown($channel) {
         fputs($fp,"Command: konference talkvolume $channel down\r\n\r\n");
        	fputs($fp,"action: logoff\r\n");
         fputs($fp,"\r\n");
+        while (!feof($fp)) {
+                $line=(fgets($fp, 4096));
+                echo "$line<br>";
+        }
 }
 
 function volumeUp($channel) {
@@ -210,6 +219,10 @@ function volumeUp($channel) {
         fputs($fp,"Command: konference talkvolume $channel up\r\n\r\n");
        	fputs($fp,"action: logoff\r\n");
         fputs($fp,"\r\n");
+        while (!feof($fp)) {
+                $line=(fgets($fp, 4096));
+                echo "$line<br>";
+        }
 }
 
 function muteUser($db,$channel) {
@@ -217,10 +230,10 @@ function muteUser($db,$channel) {
 	$fp = managerConnect();
 	if ($db_engine == "sqlite") {
 		$sql = "select muted from online where channel='$channel'";
-		$query = sqlite3_query($db, $sql);
-		if (!$query) die (sqlite3_error($db));
+		$results = $db->query($sql);
+		if (!$results) die (sqlite3_error($db));
 		$muted = 0;
-		while ( ($row = sqlite3_fetch_array($query))) {
+		while ( ($row = $results->fetchArray())) {
 			$muted = $row['muted'];
 		}
 	} else if ($db_engine == "mysql") {
@@ -237,12 +250,20 @@ function muteUser($db,$channel) {
         	fputs($fp,"Command: konference unmutechannel $channel\r\n\r\n");
 	       	fputs($fp,"action: logoff\r\n");
         	fputs($fp,"\r\n");
+	        while (!feof($fp)) {
+        	        $line=(fgets($fp, 4096));
+	                echo "$line<br>";
+        	}
 		changeMute($db,$channel,0);
 	} else if ($muted == 0) {
 	       	fputs($fp,"Action: Command\r\n");
         	fputs($fp,"Command: konference mutechannel $channel\r\n\r\n");
 	       	fputs($fp,"action: logoff\r\n");
         	fputs($fp,"\r\n");
+	        while (!feof($fp)) {
+        	        $line=(fgets($fp, 4096));
+                	echo "$line<br>";
+	        }
 		changeMute($db,$channel,1);
 	}
 
@@ -311,6 +332,10 @@ function recordConference($db,$conference) {
 	        	fputs($fp,"Command: konference kickchannel $channel\r\n\r\n");
         		fputs($fp,"action: logoff\r\n");
 		        fputs($fp,"\r\n");
+		        while (!feof($fp)) {
+                		$line=(fgets($fp, 4096));
+		                echo "$line<br>";
+		        }
 		} else {
 			$time = time();
 		        $RECORDINGFILE=$recordings_location . "/" . $conference . "/" . $time;
@@ -333,7 +358,10 @@ function recordConference($db,$conference) {
 			fputs($fp,$cmd);
                         fputs($fp,"action: logoff\r\n");
                         fputs($fp,"\r\n");
-			
+		        while (!feof($fp)) {
+                		$line=(fgets($fp, 4096));
+		                echo "$line<br>";
+		        }	
 		}
 
 	}

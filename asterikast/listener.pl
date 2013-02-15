@@ -15,38 +15,46 @@ use File::Touch;
 
 my $host = "127.0.0.1";
 my $port = 5038;
-my $user = "";
-my $secret = "";
+my $user = "asterikast";
+my $secret = "asterikast";
 my $EOL = "\015\012";
 my $BLANK = $EOL x 2;
 my $mysql_auto_reconnect = 1;
-my $db_engine="mysql"; #sqlite or mysql (mysql for high volume)
+my $db_engine="sqlite"; #sqlite or mysql (mysql for high volume)
 my $dbh = "";
 #######Mysql Information####################
 my $mysql_username = "asteriskuser";
 my $mysql_password = "";
 my $mysql_db = "conference";
 my $mysql_host = "localhost";
+#######Sqlite Information###################
+my $db_location = "/var/database/asterikast.db";
 #######Recording Information################
 
 watchdog(); #Check to see if application is already running, if it is exit.
-forkproc(); #Uncomment if you want to fork to the background (recommended for production)
+#forkproc(); #Uncomment if you want to fork to the background (recommended for production)
 
 
 ###############################Application do not edit below this line#########################################
 #handle a restart
 if ($ARGV[0] eq "restart") {
-        open FILE, "/var/run/listener.pid" or die $!;
+        open FILE, "/tmp/listener.pid" or die $!;
         my @lines = <FILE>;
         foreach(@lines) {
                 `kill -9 $_`
         }
         close(FILE);
-        unlink("/var/run/listener.pid");
+        unlink("/tmp/listener.pid");
 	print STDERR "$t Listener restarted\n";
 }
 
+if ($db_engine eq "mysql") {
 	$dbh = DBI->connect( "dbi:mysql:$mysql_db;host=$mysql_host", $mysql_username, $mysql_password,{mysql_auto_reconnect => $mysql_auto_reconnect},);
+} else {
+	unlink($db_location);
+	$dbh = DBI->connect("dbi:SQLite:dbname=$db_location","","");
+	createSQLiteTable();
+}
 
 reconnect:
 print STDERR "$t reconnect\n";
@@ -164,7 +172,7 @@ sub ConferenceDTMF {
 			}
 		}
 		
-		$sql = "UPDATE online SET lastmenuoption=NULL WHERE channel='$channel' LIMIT 1";
+		$sql = "UPDATE online SET lastmenuoption=NULL WHERE channel='$channel'";
 		my $sth = $dbh->prepare($sql);
 	        $sth->execute;
 	        $sth->finish;
@@ -195,7 +203,7 @@ sub ConferenceDTMF {
 					command("Action: Command${EOL}Command: konference play sound $tchannel call recorded disabled mute${BLANK}");
 				}
 				
-				$dbh->do("UPDATE online SET lastmenuoption=NULL WHERE channel='$channel' LIMIT 1");
+				$dbh->do("UPDATE online SET lastmenuoption=NULL WHERE channel='$channel'");
 			}
 		}
 	}
@@ -219,7 +227,7 @@ sub ConferenceDTMF {
 	}
 	if ($key == 8 && $lastoption eq "*") {
 		command("Action: Command${EOL}Command: konference stop sounds $channel${BLANK}");
-		$dbh->do("UPDATE online SET lastmenuoption=NULL WHERE channel='$channel' LIMIT 1");
+		$dbh->do("UPDATE online SET lastmenuoption=NULL WHERE channel='$channel'");
 		
 	}
 	
@@ -266,9 +274,9 @@ sub ConferenceState {
 	$state = shift;
 	if (defined($dbh)) {
 		if ($state eq "speaking") {			
-			$dbh->do("UPDATE online set talking='1' where channel='$channel' LIMIT 1");
+			$dbh->do("UPDATE online set talking='1' where channel='$channel'");
 		} elsif ($state eq "silent") {
-			$dbh->do("UPDATE online set talking='0' where channel='$channel' LIMIT 1");
+			$dbh->do("UPDATE online set talking='0' where channel='$channel'");
 		}
 	} else {
 		print "No Database\n";
@@ -287,7 +295,7 @@ sub ConferenceLeave {
 	$duration = shift;
 	$fulluniqueid = shift;
 	if (defined($dbh)) {
-		$dbh->do("DELETE FROM online where conference='$conference' AND member_id='$member' limit 1");
+		$dbh->do("DELETE FROM online where conference='$conference' AND member_id='$member'");
 		
 		$sql = "SELECT count(*) from online where conference='$conference' AND number='100'";
 		my $sth = $dbh->prepare($sql);
@@ -296,8 +304,7 @@ sub ConferenceLeave {
 			$count = $count -$row[0];
 		}
 		
-		$dbh->do("UPDATE cdr SET duration='$duration',leavetime=NOW() WHERE uniqueid='$fulluniqueid' LIMIT 1");
-		print "UPDATE cdr SET duration='$duration',leavetime=NOW() WHERE uniqueid='$fulluniqueid' LIMIT 1\n";
+		#$dbh->do("UPDATE cdr SET duration='$duration',leavetime=NOW() WHERE uniqueid='$fulluniqueid'");
 		
 		if ($flags =~ /w/) { ## Music on hold unill moderator is present
 			if ($moderators == 0) {				
@@ -344,7 +351,7 @@ sub ConferenceLeave {
                         $sth->execute;
 			while (@row = $sth->fetchrow_array) {
 				$tchannel = $row[0];
-				command("Action: Command${EOL}Command: konference play sound $tchannel leave mute${BLANK}");
+				command("Action: Command${EOL}Command: konference play sound $tchannel confbridge-leave mute${BLANK}");
                         }
 			
 		}
@@ -470,7 +477,7 @@ sub ConferenceJoin {
                         $sth->execute;
 			while (@row = $sth->fetchrow_array) {
 				$tchannel = $row[0];
-				command("Action: Command${EOL}Command: konference play sound $tchannel join mute${BLANK}");
+				command("Action: Command${EOL}Command: konference play sound $tchannel confbridge-join mute${BLANK}");
                         }
                         $sth->finish;
 			
@@ -507,7 +514,7 @@ sub rtrim($) {
 
 
 sub createSQLiteTable {
-	$dbh->do("CREATE TABLE online (id INTEGER PRIMARY KEY, member_id INTEGER, conference varchar(255), channel varchar(80), talking INTEGER DEFAULT 0,muted INTEGER DEFAULT 0,number varchar(20), name varchar(20),admin INTEGER default 0,scoreid INTEGER default 0)");
+	$dbh->do("CREATE TABLE online (id INTEGER PRIMARY KEY, member_id INTEGER, conference varchar(255), channel varchar(80), talking INTEGER DEFAULT 0,muted INTEGER DEFAULT 0,number varchar(20), name varchar(20),admin INTEGER default 0,scoreid INTEGER default 0,lastmenuoption varchar(25),uniqueid varchar(25))");
 }
 
 
@@ -659,12 +666,12 @@ sub send_cmd {
 
 sub watchdog {
 
-if (-e "/var/run/listener.pid") {
+if (-e "/tmp/listener.pid") {
 
-        open FILE, "/var/run/listener.pid";
+        open FILE, "/tmp/listener.pid";
         my @lines = <FILE>;
         foreach(@lines) {
-                 print STDERR "$t listner.pl PID found at $_ /var/run/listener.pid\n";
+                 print STDERR "$t listner.pl PID found at $_ /tmp/listener.pid\n";
         }
         exit
 } else {
@@ -681,13 +688,13 @@ sub forkproc {
 	chdir '/'                 or die "Can't chdir to /: $!";
 	umask 0;
 	open STDIN, '/dev/null'   or die "Can't read /dev/null: $!";
-	open STDOUT, '>>/var/log/listener.out' or die "Can't write to /dev/null: $!";
-	open STDERR, '>>/var/log/listener.err' or die "Can't write to /dev/null: $!";
+	open STDOUT, '>>/tmp/listener.out' or die "Can't write to /dev/null: $!";
+	open STDERR, '>>/tmp/listener.err' or die "Can't write to /dev/null: $!";
 	defined(my $pid = fork)   or die "Can't fork: $!";
 	exit if $pid;
 	setsid                    or die "Can't start a new session: $!";
 	$pid = $$;
-	open FILE, ">", "/var/run/listener.pid";
+	open FILE, ">", "/tmp/listener.pid";
 	print FILE $pid;
 	close(FILE);
 }

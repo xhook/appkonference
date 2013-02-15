@@ -11,6 +11,7 @@ $conferences = getAllConferences($db);
         <td align="center" class="tableHeaderRight">Commands</td>
     </tr>
 <?php
+$row_id="RowOdd";
 foreach($conferences as &$conference) {
 	$count = getConferenceCount($db,$conference);
         if ($row_id == "RowEven") {
@@ -31,4 +32,4 @@ foreach($conferences as &$conference) {
 	</tr>
 <?php } ?>
 </table>
-<?php sqlite3_close ($db); ?>
+<?php if ($db_engine == "sqlite") { $db->close(); } ?>

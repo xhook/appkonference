@@ -1,10 +1,10 @@
 <script language="JavaScript" src="js/tooltip.js"></script>
 <?php
-$use_module=0;
 include('includes/connect.php.inc');
 include('includes/functions.php.inc');
 $conference = $_GET['conference'];
 $members = getConference($db,$conference);
+include('config.php.inc');
 ?>
 <table align="center" border="0" cellpadding="4" cellspacing="0" id="mainTable">
 	<tr class="tableHeader">
@@ -21,12 +21,12 @@ foreach($members as &$member) {
 	$name = getName($db,$member);
 	$number = getNumber($db,$member);
 	$talking = 0;
-	if ($use_module=1) {
-		$scoreid = getScoreid($db,$member);
-		$talking = is_speaking($scoreid);
+	if ($use_module==1) {
+		include('score.php');
 	} else {
 		$talking = getTalking($db,$member);
 	}
+	$row_id="RowOdd";
 	$muted = getMuted($db,$member);
         if ($row_id == "RowEven") {
                 $row_id = "RowOdd";
@@ -73,4 +73,4 @@ foreach($members as &$member) {
 	</tr>
 <?php } ?>
 </table>
-<?php sqlite3_close ($db); ?>
+<?php if ($db_engine == "sqlite") { $db->close(); } ?>
