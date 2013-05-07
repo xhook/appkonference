@@ -59,11 +59,14 @@ static int process_incoming(ast_conf_member *member, ast_conference *conf, struc
 				// send the frame to the preprocessor
 				f = convert_frame(member->to_dsp, f, 1);
 #if	SILDET == 1
+//				ast_log(LOG_NOTICE, "sample rate for webRTC:  %d\n", AST_CONF_SAMPLE_RATE);
+
 #if	ASTERISK_SRC_VERSION == 104
 				if (!WebRtcVad_Process(member->dsp, AST_CONF_SAMPLE_RATE, f->data, AST_CONF_BLOCK_SAMPLES))
 #else
 				if (!WebRtcVad_Process(member->dsp, AST_CONF_SAMPLE_RATE, f->data.ptr, AST_CONF_BLOCK_SAMPLES))
-#endif
+#endif // ASTERISK_SRC_VERSION == 104
+
 #elif	SILDET == 2
 #if	ASTERISK_SRC_VERSION == 104
 				if (!speex_preprocess(member->dsp, f->data, NULL))
@@ -76,6 +79,7 @@ static int process_incoming(ast_conf_member *member, ast_conference *conf, struc
 					// we ignore the preprocessor's outcome if we've seen voice frames
 					// in within the last AST_CONF_FRAMES_TO_SKIP frames
 					//
+
 					if (member->ignore_vad_result > 0)
 					{
 						// skip speex_preprocess(), and decrement counter
@@ -83,10 +87,15 @@ static int process_incoming(ast_conf_member *member, ast_conference *conf, struc
 #if	defined(SPEAKER_SCOREBOARD) && defined(CACHE_CONTROL_BLOCKS)
 							*(speaker_scoreboard + member->score_id) = '\x00';
 #else
+							char workspace[1024];
+							char *varval = "<unknown>";
+							get_unison_event_server_node_variable(member->chan, &varval, workspace, sizeof(workspace));
+
 							manager_event(
 								EVENT_FLAG_CONF,
 								"ConferenceState",
 								"Channel: %s\r\n"
+								"UnisonEventServerNode: %s\r\n"
 								"Flags: %s\r\n"
 								"State: %s\r\n",
 #if	ASTERISK_SRC_VERSION < 1100
@@ -94,6 +103,7 @@ static int process_incoming(ast_conf_member *member, ast_conference *conf, struc
 #else
 								ast_channel_name(member->chan),
 #endif
+								S_OR(varval, ""),
 								member->flags,
 								"silent"
 							);
@@ -112,10 +122,15 @@ static int process_incoming(ast_conf_member *member, ast_conference *conf, struc
 #if	defined(SPEAKER_SCOREBOARD) && defined(CACHE_CONTROL_BLOCKS)
 						*(speaker_scoreboard + member->score_id) = '\x01';
 #else
+						char workspace[1024];
+						char *varval = "<unknown>";
+						get_unison_event_server_node_variable(member->chan, &varval, workspace, sizeof(workspace));
+
 						manager_event(
 							EVENT_FLAG_CONF,
 							"ConferenceState",
 							"Channel: %s\r\n"
+							"UniisonEventServerNode: %s\r\n"
 							"Flags: %s\r\n"
 							"State: %s\r\n",
 #if	ASTERISK_SRC_VERSION < 1100
@@ -123,6 +138,7 @@ static int process_incoming(ast_conf_member *member, ast_conference *conf, struc
 #else
 							ast_channel_name(member->chan),
 #endif
+							S_OR(varval, ""),
 							member->flags,
 							"speaking"
 						);
@@ -387,10 +403,15 @@ int member_exec(struct ast_channel* chan, const char* data)
 	AST_LIST_INSERT_HEAD(member->bucket, member, hash_entry);
 	AST_LIST_UNLOCK(member->bucket);
 
+	char workspace[1024];
+	char *varval = "<unknown>";
+	get_unison_event_server_node_variable(member->chan, &varval, workspace, sizeof(workspace));
+
 	manager_event(
 		EVENT_FLAG_CONF,
 		"ConferenceJoin",
 		"ConferenceName: %s\r\n"
+		"Conference UID: %s\r\n"
 		"Type: %s\r\n"
 		"UniqueID: %s\r\n"
 		"Member: %d\r\n"
@@ -401,9 +422,11 @@ int member_exec(struct ast_channel* chan, const char* data)
 		"Channel: %s\r\n"
 		"CallerID: %s\r\n"
 		"CallerIDName: %s\r\n"
+		"UnisonEventServerNode: %s\r\n"
 		"Moderators: %d\r\n"
 		"Count: %d\r\n",
 		conf->name,
+		conf->conf_uid,
 		member->type,
 #if	ASTERISK_SRC_VERSION < 1100
 		member->chan->uniqueid,
@@ -432,6 +455,7 @@ int member_exec(struct ast_channel* chan, const char* data)
 		S_COR(ast_channel_caller(member->chan)->id.name.valid, ast_channel_caller(member->chan)->id.name.str, "<unknown>"),
 #endif
 #endif
+		S_OR(varval, ""),
 		conf->moderators,
 		conf->membercount
 	);
@@ -652,6 +676,19 @@ ast_conf_member* create_member(struct ast_channel *chan, const char* data, char*
 
 	// keep pointer to member's channel
 	member->chan = chan;
+
+	// check for enter/leave sounds
+	{
+		const char *tmp;
+	    ast_channel_lock(chan);
+	    member->join_sound = (tmp = "join") ?
+	    ast_strdup(tmp) : NULL;
+	    member->leave_sound = (tmp = "leave") ?
+	    ast_strdup(tmp) : NULL;
+	    ast_channel_unlock(chan);
+	}
+	//DEBUG("conference sounds: join '%s' leave '%s'\n", member->join_sound, member->leave_sound);
+
 
 	// set default if no type parameter
 	if (!(*(member->type))) {
@@ -1008,6 +1045,10 @@ ast_conf_member* delete_member(ast_conf_member* member)
 	{
 		ast_free(member->spyee_channel_name);
 	}
+
+	// free join/leave sound file names (NULL if not set)
+	ast_free(member->join_sound);
+	ast_free(member->leave_sound);
 
 	// clear all sounds
 	ast_conf_soundq *sound = member->soundq;
@@ -1425,4 +1466,57 @@ void member_process_spoken_frames(ast_conference* conf,
 	}
 
 	return;
+}
+
+// Add sound file to a member's sound queue
+void member_play_sound ( struct ast_conf_member *member, const char *filename )
+{
+	struct ast_conf_soundq *newsound;
+	struct ast_conf_soundq **q;
+
+	newsound = calloc(1,sizeof(struct ast_conf_soundq));
+
+	ast_mutex_lock(&member->lock);
+	if (newsound == NULL) {
+		perror("calloc for struct ast_conf_soundq failed");
+	}
+	else
+	{
+#if	ASTERISK_SRC_VERSION < 1100
+		newsound->stream = ast_openstream(member->chan, filename, member->chan->language);
+#else
+		newsound->stream = ast_openstream(member->chan, filename, ast_channel_language(member->chan));
+#endif
+		if (newsound->stream)
+		{
+//#if ASTERISK_SRC_VERSION < 1100
+//			member->chan->stream = NULL;
+//#else
+//			ast_channel_stream_set(member->chan, NULL);
+//#endif
+			ast_copy_string(newsound->name, filename, sizeof(newsound->name));
+			// append sound to the end of the list.
+			for (q=&member->soundq; *q; q = &((*q)->next));
+			*q = newsound;
+
+#if ASTERISK_SRC_VERSION < 1100
+			ast_log( LOG_VERBOSE, "Playing conference message %s to channel %s\n", filename, member->chan->name ) ;
+#else
+			ast_log( LOG_VERBOSE, "Playing conference message %s to channel %s\n", filename, ast_channel_name(member->chan)) ;
+#endif
+		}
+		else
+		{
+			char fmt[256];
+#if ASTERISK_SRC_VERSION < 1100
+			ast_log(LOG_ERROR, "Unable to open %s (format %s): %s\n",
+					filename, ast_getformatname_multiple(fmt, sizeof(fmt), member->chan->nativeformats), strerror(errno));
+#else
+			ast_log(LOG_ERROR, "Unable to open %s (format %s): %s\n",
+								filename, ast_getformatname_multiple(fmt, sizeof(fmt), ast_channel_nativeformats(member->chan)), strerror(errno));
+#endif
+			ast_free(newsound);
+		}
+	}
+	ast_mutex_unlock(&member->lock);
 }

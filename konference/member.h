@@ -73,6 +73,10 @@ struct ast_conf_member
 
 	int max_users; // zero or max users for this conference
 
+	// sounds to play to the member when somebody joins/leaves the conference
+	char * join_sound;
+	char * leave_sound;
+
 	// block ids
 	int conf_id;
 #if	defined(SPEAKER_SCOREBOARD) && defined(CACHE_CONTROL_BLOCKS)
@@ -184,6 +188,8 @@ int member_exec(struct ast_channel* chan, void* data);
 #else
 int member_exec(struct ast_channel* chan, const char* data);
 #endif
+
+void member_play_sound( struct ast_conf_member *, const char *) ;
 
 ast_conf_member* create_member(struct ast_channel* chan, const char* data, char* conf_name);
 ast_conf_member* delete_member(ast_conf_member* member);
