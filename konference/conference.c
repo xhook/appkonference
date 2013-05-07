@@ -80,7 +80,7 @@ static int conference_count;
 
 // Forward function declarations
 static ast_conference* find_conf(const char* name);
-static void get_unison_event_server_node_variable(struct ast_channel* channel, char **varval, char *workspace, int wssize);
+//static void get_unison_event_server_node_variable(struct ast_channel* channel, char **varval, char *workspace, int wssize);
 static ast_conference* create_conf(char* name, ast_conf_member* member);
 static ast_conference* remove_conf(ast_conference* conf);
 static void add_member(ast_conf_member* member, ast_conference* conf);
@@ -500,7 +500,7 @@ static ast_conference* find_conf(const char* name)
 	return conf;
 }
 
-static void get_unison_event_server_node_variable(struct ast_channel *channel, char **varval, char *workspace, int wssize)
+ void get_unison_event_server_node_variable(struct ast_channel *channel, char **varval, char *workspace, int wssize)
 {
 	char varname[] = "unison_event_server_node";
 	pbx_retrieve_variable(channel, varname, varval, workspace, wssize, NULL);

@@ -117,6 +117,8 @@ void queue_frame_for_listener(ast_conference* conf, ast_conf_member* member);
 void queue_frame_for_speaker(ast_conference* conf, ast_conf_member* member);
 void queue_silent_frame(ast_conference* conf, ast_conf_member* member);
 
+void get_unison_event_server_node_variable(struct ast_channel *channel, char **varval, char *workspace, int wssize);
+
 void remove_member(ast_conf_member* member, ast_conference* conf, char* conf_name);
 
 // called by app_conference.c:load_module()
