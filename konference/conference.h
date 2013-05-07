@@ -32,6 +32,8 @@
 
 #define CONF_NAME_LEN 80
 
+#define MAX_CONF_UID  128+22+1  // max system_name + two ints + terminating zero
+
 //
 // struct declarations
 //
@@ -43,6 +45,9 @@ struct ast_conference
 	
 	// start time
 	struct timeval time_entered;
+
+	// unique conference ID
+	char conf_uid[MAX_CONF_UID];
 
 	// moderator count
 	unsigned short moderators;
@@ -148,6 +153,9 @@ void play_sound_channel(int fd, const char *channel, const char * const *file, i
 #endif
 
 void stop_sound_channel(int fd, const char *channel);
+
+void start_moh_member(int fd, ast_conf_member* member);
+void stop_moh_member(int fd, ast_conf_member* member);
 
 void start_moh_channel(int fd, const char *channel);
 void stop_moh_channel(int fd, const char *channel);
