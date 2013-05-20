@@ -130,7 +130,7 @@ static int process_incoming(ast_conf_member *member, ast_conference *conf, struc
 							EVENT_FLAG_CONF,
 							"ConferenceState",
 							"Channel: %s\r\n"
-							"UniisonEventServerNode: %s\r\n"
+							"UnisonEventServerNode: %s\r\n"
 							"Flags: %s\r\n"
 							"State: %s\r\n",
 #if	ASTERISK_SRC_VERSION < 1100
